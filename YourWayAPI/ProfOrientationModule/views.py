@@ -1,0 +1,108 @@
+import json
+import os
+from django.shortcuts import render
+from rest_framework.response import Response
+import coreapi
+import coreschema
+from rest_framework import schemas
+from rest_framework.views import APIView
+from django.http import HttpResponse
+from rest_framework.schemas.openapi import AutoSchema
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+
+from ProfOrientationModule.models.DBModule.DBService import DBService
+from ProfOrientationModule.models.VKService import VKService
+from ProfOrientationModule.models.NNModule.bert_classifier import BertClassifier
+
+from ProfOrientationModule.models_classes import GroupWithTest, ProgramWithSuply, Question
+
+from ProfOrientationModule.serializers import GroupAndQuestionSerializer, AnswersSerializer, ProgramWithSuplySerializer
+from rest_framework.decorators import api_view
+
+# Create your views here.
+class GetGroupView(APIView):
+    __access_token__ = os.environ['ACCESS_TOKEN_VK']
+    __db_service__ = DBService(database="your_way_db", user="postgres", password="123zhz", host="localhost", port="5432")
+    __classifier__ = BertClassifier(
+                model_path='cointegrated/rubert-tiny',
+                tokenizer_path='cointegrated/rubert-tiny',
+                n_classes=41,
+                epochs=60,
+                max_len=512,
+                model_save_path='./output/model.pt'
+            )
+
+    @swagger_auto_schema(
+        responses={200: GroupAndQuestionSerializer},
+        operation_description="This method define the education\'s group by data from VK page",
+        manual_parameters=[
+            openapi.Parameter(
+                'id_vk',
+                openapi.IN_QUERY,
+                description="ID VK, from where will be defined edu group",
+                type=openapi.TYPE_STRING,
+            )
+        ],
+    )
+
+    def get(self, request):
+        id_vk = request.GET.get('id_vk')
+
+        #определим группу направлений
+        self.__classifier__.load_model('./ProfOrientationModule/models/NNModule/trained_models/model_v0_3.pt')
+
+        vk_service = VKService(self.__db_service__, self.__access_token__)
+
+        prediction = self.__classifier__.predict(vk_service.get_fields(id_vk))
+
+        group = self.__db_service__.get_group(prediction)
+
+        #определим вопросы по группе направлений
+        questions_list = list()
+
+        questions_tuple = self.__db_service__.get_questions(group)
+
+        for tuple in questions_tuple:
+            new_question = Question()
+            new_question.question = tuple[0]
+            new_question.program = tuple[1]
+            questions_list.append(new_question)
+
+        #формируем ответ
+        result = GroupWithTest()
+        result.group = group
+        result.questions = questions_list
+
+        return Response(GroupAndQuestionSerializer(result).data)
+    
+class PostProgramView(APIView):
+    __access_token__ = os.environ['ACCESS_TOKEN_VK']
+    __db_service__ = DBService(database="your_way_db", user="postgres", password="123zhz", host="localhost", port="5432")
+
+    @swagger_auto_schema(
+        operation_description="This method define the education\'s program by answers on test from edu/group method",
+        responses={200: ProgramWithSuplySerializer},
+        request_body=AnswersSerializer(many=True)
+    )
+    def post(self, request, *args, **kwargs):
+        answers_list = json.loads(request.body)
+        total_sums = dict()
+
+        for answer in answers_list:
+            if answer['program'] in total_sums:
+                total_sums[answer['program']] += answer['answer']
+            else:
+                total_sums[answer['program']] = answer['answer']
+
+        defined_program = max(total_sums, key=total_sums.get)
+
+        professions = self.__db_service__.get_professions()
+        subjects = self.__db_service__.get_subjects()
+
+        result = ProgramWithSuply()
+        result.professions = professions
+        result.subjects = subjects
+        result.edu_program = defined_program
+
+        return Response(ProgramWithSuplySerializer(result).data)
