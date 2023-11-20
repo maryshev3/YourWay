@@ -10,14 +10,15 @@ from django.http import HttpResponse
 from rest_framework.schemas.openapi import AutoSchema
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status
 
 from ProfOrientationModule.models.DBModule.DBService import DBService
-from ProfOrientationModule.models.VKService import VKService
+from ProfOrientationModule.models.VKService import PageClosed, PageFaked, VKService
 from ProfOrientationModule.models.NNModule.bert_classifier import BertClassifier
 
 from ProfOrientationModule.models_classes import GroupWithTest, ProgramWithSuply, Question
 
-from ProfOrientationModule.serializers import GroupAndQuestionSerializer, AnswersSerializer, ProgramWithSuplySerializer
+from ProfOrientationModule.serializers import ErrorSerializer, GroupAndQuestionSerializer, AnswersSerializer, ProgramWithSuplySerializer
 from rest_framework.decorators import api_view
 
 # Create your views here.
@@ -34,7 +35,7 @@ class GetGroupView(APIView):
             )
 
     @swagger_auto_schema(
-        responses={200: GroupAndQuestionSerializer},
+        responses={200: GroupAndQuestionSerializer, 406: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer},
         operation_description="This method define the education\'s group by data from VK page",
         manual_parameters=[
             openapi.Parameter(
@@ -47,14 +48,20 @@ class GetGroupView(APIView):
     )
 
     def get(self, request):
+        #try:
         id_vk = request.GET.get('id_vk')
 
         #определим группу направлений
-        self.__classifier__.load_model('./ProfOrientationModule/models/NNModule/trained_models/model_v0_3.pt')
+        self.__classifier__.load_model('./ProfOrientationModule/models/NNModule/trained_models/model_v0_4.pt')
 
         vk_service = VKService(self.__db_service__, self.__access_token__)
 
-        prediction = self.__classifier__.predict(vk_service.get_fields(id_vk))
+        try:
+            prediction = self.__classifier__.predict(vk_service.get_fields(id_vk))
+        except PageClosed as ex:
+            return Response({'error':ex.txt}, status=status.HTTP_406_NOT_ACCEPTABLE)
+        except PageFaked as ex:
+            return Response({'error':ex.txt}, status=status.HTTP_404_NOT_FOUND)
 
         group = self.__db_service__.get_group(prediction)
 
@@ -75,6 +82,8 @@ class GetGroupView(APIView):
         result.questions = questions_list
 
         return Response(GroupAndQuestionSerializer(result).data)
+        #except:
+            #return Response({'error':'Error on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 class PostProgramView(APIView):
     __access_token__ = os.environ['ACCESS_TOKEN_VK']
@@ -82,27 +91,30 @@ class PostProgramView(APIView):
 
     @swagger_auto_schema(
         operation_description="This method define the education\'s program by answers on test from edu/group method",
-        responses={200: ProgramWithSuplySerializer},
+        responses={200: ProgramWithSuplySerializer, 500: ErrorSerializer},
         request_body=AnswersSerializer(many=True)
     )
     def post(self, request, *args, **kwargs):
-        answers_list = json.loads(request.body)
-        total_sums = dict()
+        try:
+            answers_list = json.loads(request.body)
+            total_sums = dict()
 
-        for answer in answers_list:
-            if answer['program'] in total_sums:
-                total_sums[answer['program']] += answer['answer']
-            else:
-                total_sums[answer['program']] = answer['answer']
+            for answer in answers_list:
+                if answer['program'] in total_sums:
+                    total_sums[answer['program']] += answer['answer']
+                else:
+                    total_sums[answer['program']] = answer['answer']
 
-        defined_program = max(total_sums, key=total_sums.get)
+            defined_program = max(total_sums, key=total_sums.get)
 
-        professions = self.__db_service__.get_professions()
-        subjects = self.__db_service__.get_subjects()
+            professions = self.__db_service__.get_professions()
+            subjects = self.__db_service__.get_subjects()
 
-        result = ProgramWithSuply()
-        result.professions = professions
-        result.subjects = subjects
-        result.edu_program = defined_program
+            result = ProgramWithSuply()
+            result.professions = professions
+            result.subjects = subjects
+            result.edu_program = defined_program
 
-        return Response(ProgramWithSuplySerializer(result).data)
+            return Response(ProgramWithSuplySerializer(result).data)
+        except:
+            return Response({'error':'Error on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

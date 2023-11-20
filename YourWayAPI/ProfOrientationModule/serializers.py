@@ -21,3 +21,6 @@ class ProgramWithSuplySerializer(serializers.Serializer):
    edu_program = serializers.CharField()
    professions = ProfessionsSerializer(many=True)
    subjects = SubjectsSerializer(many=True)
+
+class ErrorSerializer(serializers.Serializer):
+   error = serializers.CharField()
