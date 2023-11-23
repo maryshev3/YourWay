@@ -24,7 +24,7 @@ from rest_framework.decorators import api_view
 # Create your views here.
 class GetGroupView(APIView):
     __access_token__ = os.environ['ACCESS_TOKEN_VK']
-    __db_service__ = DBService(database="your_way_db", user="postgres", password="123zhz", host="localhost", port="5432")
+    __db_service__ = DBService(database="your_way_db_", user="postgres", password="123zhz", host="localhost", port="5432")
     __classifier__ = BertClassifier(
                 model_path='cointegrated/rubert-tiny',
                 tokenizer_path='cointegrated/rubert-tiny',
@@ -73,7 +73,7 @@ class GetGroupView(APIView):
         for tuple in questions_tuple:
             new_question = Question()
             new_question.question = tuple[0]
-            new_question.program = tuple[1]
+            new_question.edu_program = tuple[1]
             questions_list.append(new_question)
 
         #формируем ответ

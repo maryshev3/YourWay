@@ -45,7 +45,7 @@ class DBService:
     def is_popular_public(self, public_name):
         cursor = self.__connection__.cursor()
 
-        cursor.execute("SELECT count(*) FROM popular_publics WHERE popular_publics.public = \'" + public_name + "\';")
+        cursor.execute("SELECT count(*) FROM popular_public WHERE popular_public.public = \'" + public_name + "\';")
         count = cursor.fetchone()[0]
 
         cursor.close()
@@ -62,7 +62,7 @@ class DBService:
         self.__connection__.commit()
 
         for public in public_list:
-            cursor.execute("INSERT INTO popular_publics VALUES (\'" + public + "\');")
+            cursor.execute("INSERT INTO popular_public VALUES (\'" + public + "\');")
 
         self.__connection__.commit()
         cursor.close()
@@ -90,12 +90,12 @@ class DBService:
     def get_questions(self, group):
         cursor = self.__connection__.cursor()
 
-        cursor.execute("SELECT group_id FROM groups WHERE groups.group = " + str(group) + ";")
-        group_id = cursor.fetchone()[0]
+        #cursor.execute("SELECT group_id FROM groups WHERE groups.group = " + str(group) + ";")
+        #group_id = cursor.fetchone()[0]
 
-        cursor.execute("SELECT question, program FROM questions INNER JOIN programs ON questions.program_id = programs.program_id WHERE programs.group_id = " + str(group_id) + ";")
+        cursor.execute("SELECT questions, program FROM questions INNER JOIN programs ON questions.program_id = programs.program_id WHERE programs.group = " + str(group) + ";")
         questions = cursor.fetchall()
-
+        print(questions)
         cursor.close()
 
         return questions
