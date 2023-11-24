@@ -18,11 +18,12 @@ from ProfOrientationModule.models.NNModule.bert_classifier import BertClassifier
 
 from ProfOrientationModule.models_classes import GroupWithTest, ProgramWithSuply, Question
 
-from ProfOrientationModule.serializers import ErrorSerializer, GroupAndQuestionSerializer, AnswersSerializer, ProgramWithSuplySerializer
+from ProfOrientationModule.serializers import ErrorSerializer, GroupAndQuestionSerializer, AnswersSerializer, ProgramWithSuplySerializer, SchoolsAndPublicsSerializer
 from rest_framework.decorators import api_view
 
-# Create your views here.
-class GetGroupView(APIView):
+from ProfOrientationModule.models.DataModule.data_functions import del_punctuation
+
+class PostGroupView(APIView):
     __access_token__ = os.environ['ACCESS_TOKEN_VK']
     __db_service__ = DBService(database="your_way_db_", user="postgres", password="123zhz", host="localhost", port="5432")
     __classifier__ = BertClassifier(
@@ -45,19 +46,42 @@ class GetGroupView(APIView):
                 type=openapi.TYPE_STRING,
             )
         ],
+        request_body=SchoolsAndPublicsSerializer
     )
 
-    def get(self, request):
+    def post(self, request):
         #try:
         id_vk = request.GET.get('id_vk')
+
+        user_fields = ''
+
+        if id_vk != None:
+            vk_service = VKService(self.__db_service__, self.__access_token__)
+
+            user_fields = vk_service.get_fields(id_vk)
+        else:
+            if request.body == None:
+                return Response({'error':'empty body of request'}, status=status.HTTP_403_FORBIDDEN)
+            try:
+                request_list = json.loads(request.body)
+
+                for school in request_list['schools']:
+                    user_fields = user_fields + ' ' + del_punctuation(school['name'].lower(), './\\!@#$%^&*()-+_?;\"\':`|<>[]') + ' '
+
+                user_fields = del_punctuation(user_fields, './\\!@#$%^&*()-+_?;\"\':`|<>[]')
+
+                for public in request_list['publics']:
+                    user_fields = user_fields + ' ' + del_punctuation(public['name'].lower(), './\\!@#$%^&*()-+_?;\"\':`|<>[]') + ' '
+
+                user_fields = del_punctuation(user_fields, './\\!@#$%^&*()-+_?;\"\':`|<>[]')
+            except:
+                return Response({'error':'incorrect body of request'}, status=status.HTTP_400_BAD_REQUEST)
 
         #определим группу направлений
         self.__classifier__.load_model('./ProfOrientationModule/models/NNModule/trained_models/model_v0_4.pt')
 
-        vk_service = VKService(self.__db_service__, self.__access_token__)
-
         try:
-            prediction = self.__classifier__.predict(vk_service.get_fields(id_vk))
+            prediction = self.__classifier__.predict(user_fields)
         except PageClosed as ex:
             return Response({'error':ex.txt}, status=status.HTTP_406_NOT_ACCEPTABLE)
         except PageFaked as ex:
@@ -76,8 +100,14 @@ class GetGroupView(APIView):
             new_question.edu_program = tuple[1]
             questions_list.append(new_question)
 
+        #Проверяем, есть ли вопросы по направлению
+        single_program = 'None'
+        if len(questions_list) == 0:
+            single_program = self.__db_service__.get_programs()[0][0]
+
         #формируем ответ
         result = GroupWithTest()
+        result.single_program = single_program
         result.group = group
         result.questions = questions_list
 

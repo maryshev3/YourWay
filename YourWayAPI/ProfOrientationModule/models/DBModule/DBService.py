@@ -99,6 +99,15 @@ class DBService:
         cursor.close()
 
         return questions
+    
+    def get_programs(self, group):
+        cursor = self.__connection__.cursor()
+
+        cursor.execute("SELECT program FROM programs WHERE programs.group = " + str(group) + ";")
+        programs = cursor.fetchall()
+        cursor.close()
+
+        return programs
 
     def __del__(self):
         if self.__connection__:

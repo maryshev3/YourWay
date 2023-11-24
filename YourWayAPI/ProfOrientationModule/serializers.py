@@ -9,6 +9,7 @@ class AnswersSerializer(QuestionsSerializer):
 
 class GroupAndQuestionSerializer(serializers.Serializer):
    group = serializers.IntegerField()
+   single_program = serializers.CharField()
    questions = QuestionsSerializer(many=True)
 
 class ProfessionsSerializer(serializers.Serializer):
@@ -24,3 +25,13 @@ class ProgramWithSuplySerializer(serializers.Serializer):
 
 class ErrorSerializer(serializers.Serializer):
    error = serializers.CharField()
+
+class PublicsSerializer(serializers.Serializer):
+   name = serializers.CharField()
+
+class SchoolsSerializer(serializers.Serializer):
+   name = serializers.CharField()
+
+class SchoolsAndPublicsSerializer(serializers.Serializer):
+   schools = SchoolsSerializer(many=True)
+   publics = PublicsSerializer(many=True) 

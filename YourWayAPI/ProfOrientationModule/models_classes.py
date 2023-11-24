@@ -5,6 +5,7 @@ class Question:
 
 class GroupWithTest:
     group = ''
+    single_program = ''
     questions = list()
 
 class ProgramWithSuply:
