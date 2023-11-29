@@ -23,10 +23,30 @@ from rest_framework.decorators import api_view
 
 from ProfOrientationModule.models.DataModule.data_functions import del_punctuation
 
+import configparser
+
+from ProfOrientationModule.models.JsonToUserFields import JsonToUserFields
+from ProfOrientationModule.models.TupleToQuestionsList import TupleToQuestionsList
+
 class PostGroupView(APIView):
     __access_token__ = os.environ['ACCESS_TOKEN_VK']
-    __db_service__ = DBService(database="your_way_db_", user="postgres", password="123zhz", host="localhost", port="5432")
-    __classifier__ = BertClassifier(
+    __db_service__ = None
+    __classifier__ = None
+
+    def __prepare__(self):
+        config = configparser.ConfigParser()
+
+        config.read('./ProfOrientationModule/config.ini')
+
+        self.__db_service__ = DBService(
+                database = config["DataBaseSettings"]["db_name"],
+                user = config["DataBaseSettings"]["db_user"],
+                password = config["DataBaseSettings"]["db_password"],
+                host = config["DataBaseSettings"]["db_host"],
+                port = config["DataBaseSettings"]["db_port"]
+            )
+        
+        self.__classifier__ = BertClassifier(
                 model_path='cointegrated/rubert-tiny',
                 tokenizer_path='cointegrated/rubert-tiny',
                 n_classes=41,
@@ -36,7 +56,7 @@ class PostGroupView(APIView):
             )
 
     @swagger_auto_schema(
-        responses={200: GroupAndQuestionSerializer, 406: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer},
+        responses={200: GroupAndQuestionSerializer, 406: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer, 501: ErrorSerializer},
         operation_description="This method define the education\'s group by data from VK page",
         manual_parameters=[
             openapi.Parameter(
@@ -50,60 +70,61 @@ class PostGroupView(APIView):
     )
 
     def post(self, request):
-        #try:
+        self.__prepare__()
+
         id_vk = request.GET.get('id_vk')
 
         user_fields = ''
 
-        if id_vk != None:
-            vk_service = VKService(self.__db_service__, self.__access_token__)
-
-            user_fields = vk_service.get_fields(id_vk)
-        else:
+        try:
             if request.body == None:
-                return Response({'error':'empty body of request'}, status=status.HTTP_403_FORBIDDEN)
-            try:
-                request_list = json.loads(request.body)
-
-                for school in request_list['schools']:
-                    user_fields = user_fields + ' ' + del_punctuation(school['name'].lower(), './\\!@#$%^&*()-+_?;\"\':`|<>[]') + ' '
-
-                user_fields = del_punctuation(user_fields, './\\!@#$%^&*()-+_?;\"\':`|<>[]')
-
-                for public in request_list['publics']:
-                    user_fields = user_fields + ' ' + del_punctuation(public['name'].lower(), './\\!@#$%^&*()-+_?;\"\':`|<>[]') + ' '
-
-                user_fields = del_punctuation(user_fields, './\\!@#$%^&*()-+_?;\"\':`|<>[]')
-            except:
+                raise Exception()
+            user_fields = JsonToUserFields(json.loads(request.body))
+        except:
+            if id_vk == None:
                 return Response({'error':'incorrect body of request'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                vk_service = VKService(self.__db_service__, self.__access_token__)
+
+                try:
+                    user_fields = vk_service.get_fields(id_vk)
+                except PageClosed as ex:
+                    return Response({'error':ex.txt}, status=status.HTTP_406_NOT_ACCEPTABLE)
+                except PageFaked as ex:
+                    return Response({'error':ex.txt}, status=status.HTTP_404_NOT_FOUND)
 
         #определим группу направлений
         self.__classifier__.load_model('./ProfOrientationModule/models/NNModule/trained_models/model_v0_4.pt')
 
-        try:
-            prediction = self.__classifier__.predict(user_fields)
-        except PageClosed as ex:
-            return Response({'error':ex.txt}, status=status.HTTP_406_NOT_ACCEPTABLE)
-        except PageFaked as ex:
-            return Response({'error':ex.txt}, status=status.HTTP_404_NOT_FOUND)
+        prediction = self.__classifier__.predict(user_fields)
 
         group = self.__db_service__.get_group(prediction)
 
         #определим вопросы по группе направлений
-        questions_list = list()
+        questions_list = TupleToQuestionsList(self.__db_service__.get_questions(group))
 
-        questions_tuple = self.__db_service__.get_questions(group)
-
-        for tuple in questions_tuple:
-            new_question = Question()
-            new_question.question = tuple[0]
-            new_question.edu_program = tuple[1]
-            questions_list.append(new_question)
-
-        #Проверяем, есть ли вопросы по направлению
+        #Проверяем, несколько ли направлений
         single_program = 'None'
-        if len(questions_list) == 0:
-            single_program = self.__db_service__.get_programs()[0][0]
+        programs_list = self.__db_service__.get_programs(group)
+        if len(programs_list) == 1:
+            single_program = programs_list[0][0]
+
+        if single_program == 'None':
+            #Проверим, есть ли все вопросы для группы направлений (должны быть для всех направлений подготовки)
+            is_fully = True
+
+            for program in programs_list:
+                is_contain = False
+                for question in questions_list:
+                    if question.edu_program == program[0]:
+                        is_contain = True
+                        break
+                if not is_contain:
+                    is_fully = False
+                    break
+
+            if not is_fully:
+                return Response({'error':'not for all programs in group have questions'}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
         #формируем ответ
         result = GroupWithTest()
@@ -112,12 +133,22 @@ class PostGroupView(APIView):
         result.questions = questions_list
 
         return Response(GroupAndQuestionSerializer(result).data)
-        #except:
-            #return Response({'error':'Error on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 class PostProgramView(APIView):
-    __access_token__ = os.environ['ACCESS_TOKEN_VK']
-    __db_service__ = DBService(database="your_way_db", user="postgres", password="123zhz", host="localhost", port="5432")
+    __db_service__ = None
+
+    def __prepare__(self):
+        config = configparser.ConfigParser()
+
+        config.read('./ProfOrientationModule/config.ini')
+
+        self.__db_service__ = DBService(
+                database = config["DataBaseSettings"]["db_name"],
+                user = config["DataBaseSettings"]["db_user"],
+                password = config["DataBaseSettings"]["db_password"],
+                host = config["DataBaseSettings"]["db_host"],
+                port = config["DataBaseSettings"]["db_port"]
+            )
 
     @swagger_auto_schema(
         operation_description="This method define the education\'s program by answers on test from edu/group method",
@@ -125,6 +156,8 @@ class PostProgramView(APIView):
         request_body=AnswersSerializer(many=True)
     )
     def post(self, request, *args, **kwargs):
+        self.__prepare__()
+
         try:
             answers_list = json.loads(request.body)
             total_sums = dict()

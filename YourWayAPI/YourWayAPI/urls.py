@@ -17,13 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from ProfOrientationModule.views import GetGroupView, PostProgramView
+from ProfOrientationModule.views import PostGroupView, PostProgramView
 from .yasg import urlpatterns as doc_urls
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path(r"edu/group/", GetGroupView.as_view()),
+    path(r"edu/group/", PostGroupView.as_view()),
     path(r"edu/program/", PostProgramView.as_view()),
 ]
 
