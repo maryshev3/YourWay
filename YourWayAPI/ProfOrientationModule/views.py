@@ -77,8 +77,6 @@ class PostGroupView(APIView):
         user_fields = ''
 
         try:
-            if request.body == None:
-                raise Exception()
             user_fields = JsonToUserFields(json.loads(request.body))
         except:
             if id_vk == None:
