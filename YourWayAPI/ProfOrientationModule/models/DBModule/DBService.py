@@ -15,7 +15,7 @@ class DBService:
     def get_professions(self, program):
         cursor = self.__connection__.cursor()
 
-        cursor.execute("SELECT profession FROM professions INNER JOIN programs ON professions.program_id = programs.program_id WHERE programs.program = \'" + program + "\';")
+        cursor.execute("SELECT professions.professions FROM professions INNER JOIN programs ON professions.program_id = programs.program_id WHERE programs.program = \'" + program + "\';")
 
         result = cursor.fetchall()
 
@@ -24,6 +24,9 @@ class DBService:
         i = 0
         while i < len(result):
             result[i] = result[i][0]
+            i += 1
+
+        print(result)
 
         return result
 
@@ -39,6 +42,9 @@ class DBService:
         i = 0
         while i < len(result):
             result[i] = result[i][0]
+            i += 1
+
+        print(result)
 
         return result
     

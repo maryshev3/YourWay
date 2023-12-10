@@ -161,15 +161,15 @@ class PostProgramView(APIView):
             total_sums = dict()
 
             for answer in answers_list:
-                if answer['program'] in total_sums:
-                    total_sums[answer['program']] += answer['answer']
+                if answer['edu_program'] in total_sums:
+                    total_sums[answer['edu_program']] += answer['answer']
                 else:
-                    total_sums[answer['program']] = answer['answer']
+                    total_sums[answer['edu_program']] = answer['answer']
 
             defined_program = max(total_sums, key=total_sums.get)
 
-            professions = self.__db_service__.get_professions()
-            subjects = self.__db_service__.get_subjects()
+            professions = self.__db_service__.get_professions(defined_program)
+            subjects = self.__db_service__.get_subjects(defined_program)
 
             result = ProgramWithSuply()
             result.professions = professions
