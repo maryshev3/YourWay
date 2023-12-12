@@ -97,6 +97,7 @@ class PostGroupView(APIView):
         prediction = self.__classifier__.predict(user_fields)
 
         group = self.__db_service__.get_group(prediction)
+        group_name = self.__db_service__.get_group_name(group)
 
         #определим вопросы по группе направлений
         questions_list = TupleToQuestionsList(self.__db_service__.get_questions(group))
@@ -127,7 +128,7 @@ class PostGroupView(APIView):
         #формируем ответ
         result = GroupWithTest()
         result.single_program = single_program
-        result.group = group
+        result.group = group_name
         result.questions = questions_list
 
         return Response(GroupAndQuestionSerializer(result).data)

@@ -30,6 +30,17 @@ class DBService:
 
         return result
 
+    def get_group_name(self, group_num):
+        cursor = self.__connection__.cursor()
+
+        cursor.execute(f"SELECT name FROM groups_name WHERE groups_name.group = {group_num};")
+
+        name = cursor.fetchone()[0]
+
+        cursor.close()
+
+        return name
+
     def get_subjects(self, program):
         cursor = self.__connection__.cursor()
 

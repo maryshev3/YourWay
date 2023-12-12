@@ -8,7 +8,7 @@ class AnswersSerializer(QuestionsSerializer):
    answer = serializers.IntegerField()
 
 class GroupAndQuestionSerializer(serializers.Serializer):
-   group = serializers.IntegerField()
+   group = serializers.CharField()
    single_program = serializers.CharField()
    questions = QuestionsSerializer(many=True)
 
