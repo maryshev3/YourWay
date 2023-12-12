@@ -92,7 +92,7 @@ class PostGroupView(APIView):
                     return Response({'error':ex.txt}, status=status.HTTP_404_NOT_FOUND)
 
         #определим группу направлений
-        self.__classifier__.load_model('./ProfOrientationModule/models/NNModule/trained_models/model_v0_4.pt')
+        self.__classifier__.load_model('./ProfOrientationModule/models/NNModule/trained_models/model_v0.5.pt')
 
         prediction = self.__classifier__.predict(user_fields)
 
