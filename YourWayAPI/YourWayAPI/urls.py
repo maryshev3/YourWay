@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from ProfOrientationModule.views import PostGroupView, PostProgramView, PostSuplyByProgramView
+from ProfOrientationModule.views import PostGroupView, PostProgramView
 from .yasg import urlpatterns as doc_urls
 
 
@@ -25,7 +25,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path(r"edu/group/", PostGroupView.as_view()),
     path(r"edu/program/", PostProgramView.as_view()),
-    path(r"edu/suply-by-program/", PostSuplyByProgramView.as_view()),
 ]
 
 urlpatterns += doc_urls
