@@ -4,7 +4,7 @@ class Question:
     edu_program = ''
 
 class GroupWithTest:
-    group = ''
+    group = list()
     single_program = ''
     questions = list()
 

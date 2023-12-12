@@ -201,7 +201,21 @@ class BertClassifier:
         
         prediction = torch.argmax(outputs.logits, dim=1).cpu().numpy()[0]
 
-        return prediction
+        #get the probability of each of the labels
+        probabilities = torch.softmax(outputs.logits, dim=1).cpu().detach().numpy()[0]
+
+        # add to probabilities object with label name
+        result = {
+            'prediction': prediction,
+            'probabilities': [
+                {
+                    'label': i,
+                    'probability': probabilities[i]
+                } for i in range(len(probabilities))
+            ]
+        }
+
+        return result
 
     def load_model(self, model_path):
         """

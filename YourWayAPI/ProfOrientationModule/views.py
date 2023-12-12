@@ -18,7 +18,7 @@ from ProfOrientationModule.models.NNModule.bert_classifier import BertClassifier
 
 from ProfOrientationModule.models_classes import GroupWithTest, ProgramWithSuply, Question
 
-from ProfOrientationModule.serializers import ErrorSerializer, GroupAndQuestionSerializer, AnswersSerializer, ProgramWithSuplySerializer, SchoolsAndPublicsSerializer
+from ProfOrientationModule.serializers import ErrorSerializer, GroupAndQuestionArraySerializer, GroupAndQuestionSerializer, AnswersSerializer, ProgramSerializer, ProgramWithSuplySerializer, SchoolsAndPublicsSerializer
 from rest_framework.decorators import api_view
 
 from ProfOrientationModule.models.DataModule.data_functions import del_punctuation
@@ -29,7 +29,7 @@ from ProfOrientationModule.models.JsonToUserFields import JsonToUserFields
 from ProfOrientationModule.models.TupleToQuestionsList import TupleToQuestionsList
 
 class PostGroupView(APIView):
-    __access_token__ = "vk1.a.43WgCLmm1pTqmK4zlWMm-OmU9BVJX2GQVj3nlX2_v1vvER6uDTWLkX40UtHezM-JMr9hNDwc1j7vc-R_z-xt-Di90wC6n2cbFWwoXF7sFmaRo_0a66GN_Uugt3pHJu3xxEhU4RD2LUz8AK3bCYh30w-b6D4gE1MfzTnlVSt8qazCY9JtPCeiF1Ly-W9ARr_GwJO0eso1KeHhCs7F"
+    __access_token__ = "vk1.a.43WgCLmm1pTqmK4zlWMm-OmU9BVJX2GQVj3nlX2_v1vvER6uDTWLkX40UtHezM-JMr9hNDwc1j7vc-R_z-xt-Di90wC6n2cbFWwoXF7sFmaRo_0a66GN_Uugt3pHJu3xxEhU4RD2LUz8AK3bCYh30w-b6D4gE1MfzTnlVSt8qazCY9JtPCeiF1Ly-W9ARr_GwJO0eso1KeHhCs7F_rKH5Q"
     __db_service__ = None
     __classifier__ = None
 
@@ -56,7 +56,7 @@ class PostGroupView(APIView):
             )
 
     @swagger_auto_schema(
-        responses={200: GroupAndQuestionSerializer, 406: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer, 501: ErrorSerializer},
+        responses={200: GroupAndQuestionSerializer(many=True), 406: ErrorSerializer, 404: ErrorSerializer, 500: ErrorSerializer, 501: ErrorSerializer},
         operation_description="This method define the education\'s group by data from VK page",
         manual_parameters=[
             openapi.Parameter(
@@ -69,6 +69,7 @@ class PostGroupView(APIView):
         request_body=SchoolsAndPublicsSerializer
     )
 
+    
     def post(self, request):
         self.__prepare__()
 
@@ -94,44 +95,58 @@ class PostGroupView(APIView):
         #определим группу направлений
         self.__classifier__.load_model('./ProfOrientationModule/models/NNModule/trained_models/model_v0.5.pt')
 
-        prediction = self.__classifier__.predict(user_fields)
+        prediction_tuple = self.__classifier__.predict(user_fields)
 
-        group = self.__db_service__.get_group(prediction)
-        group_name = self.__db_service__.get_group_name(group)
+        #group_list = [self.__db_service__.get_group(p['label'] for p in prediction_tuple['probabilities'])]
+
+        def get_prob(element):
+            element[1]["probability"]
+
+        #print(prediction_tuple["probabilities"])
+        groups_list = sorted(prediction_tuple["probabilities"], key=lambda g: g['probability'], reverse = True)[:3]
+
+        print(groups_list)
+
+        real_group_list = [self.__db_service__.get_group(group['label']) for group in groups_list]
+        group_name_list = [str(group) + '. ' + self.__db_service__.get_group_name(group) for group in real_group_list]
 
         #определим вопросы по группе направлений
-        questions_list = TupleToQuestionsList(self.__db_service__.get_questions(group))
+        questions_list = [TupleToQuestionsList(self.__db_service__.get_questions(group)) for group in real_group_list]
 
         #Проверяем, несколько ли направлений
         single_program = 'None'
-        programs_list = self.__db_service__.get_programs(group)
+        programs_list = [self.__db_service__.get_programs(group) for group in real_group_list]
         if len(programs_list) == 1:
             single_program = programs_list[0][0]
 
-        if single_program == 'None':
-            #Проверим, есть ли все вопросы для группы направлений (должны быть для всех направлений подготовки)
-            is_fully = True
+        # is_fully = True
+        # if single_program == 'None':
+        #     #Проверим, есть ли все вопросы для группы направлений (должны быть для всех направлений подготовки)
 
-            for program in programs_list:
-                is_contain = False
-                for question in questions_list:
-                    if question.edu_program == program[0]:
-                        is_contain = True
-                        break
-                if not is_contain:
-                    is_fully = False
-                    break
+        #     for program in programs_list:
+        #         is_contain = False
+        #         for question in questions_list:
+        #             if question.edu_program == program[0]:
+        #                 is_contain = True
+        #                 break
+        #         if not is_contain:
+        #             is_fully = False
+        #             break
 
-            if not is_fully:
-                return Response({'error':'not for all programs in group have questions'}, status=status.HTTP_501_NOT_IMPLEMENTED)
 
         #формируем ответ
-        result = GroupWithTest()
-        result.single_program = single_program
-        result.group = group_name
-        result.questions = questions_list
+        result_array = list()
 
-        return Response(GroupAndQuestionSerializer(result).data)
+        for i in range(0, 3):
+            result = GroupWithTest()
+            result.single_program = single_program
+            result.group = group_name_list[i]
+            #if is_fully:
+            result.questions = questions_list[i]
+
+            result_array.append(result)
+
+        return Response(GroupAndQuestionSerializer(result_array, many=True).data)
     
 class PostProgramView(APIView):
     __db_service__ = None
@@ -180,3 +195,40 @@ class PostProgramView(APIView):
             return Response(ProgramWithSuplySerializer(result).data)
         except:
             return Response({'error':'Error on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class PostSuplyByProgramView(APIView):
+    __db_service__ = None
+
+    def __prepare__(self):
+        config = configparser.ConfigParser()
+
+        config.read('./ProfOrientationModule/config.ini')
+
+        self.__db_service__ = DBService(
+                database = config["DataBaseSettings"]["db_name"],
+                user = config["DataBaseSettings"]["db_user"],
+                password = config["DataBaseSettings"]["db_password"],
+                host = config["DataBaseSettings"]["db_host"],
+                port = config["DataBaseSettings"]["db_port"]
+            )
+
+    @swagger_auto_schema(
+        operation_description="This method define the education\'s program by answers on test from edu/group method",
+        responses={200: ProgramWithSuplySerializer, 500: ErrorSerializer},
+        request_body=ProgramSerializer
+    )
+    def post(self, request, *args, **kwargs):
+        self.__prepare__()
+
+        program = json.loads(request.body)['edu_program']
+
+        professions = self.__db_service__.get_professions(program)
+        subjects = self.__db_service__.get_subjects(program)
+
+        result = ProgramWithSuply()
+        result.professions = professions
+        result.subjects = subjects
+        result.edu_program = program
+
+        return Response(ProgramWithSuplySerializer(result).data)
+

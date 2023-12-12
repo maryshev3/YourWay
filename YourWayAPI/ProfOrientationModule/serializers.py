@@ -1,5 +1,8 @@
 from rest_framework import serializers
 
+class ProgramSerializer(serializers.Serializer):
+   edu_program = serializers.CharField()
+
 class QuestionsSerializer(serializers.Serializer):
    question = serializers.CharField()
    edu_program = serializers.CharField()
@@ -11,6 +14,9 @@ class GroupAndQuestionSerializer(serializers.Serializer):
    group = serializers.CharField()
    single_program = serializers.CharField()
    questions = QuestionsSerializer(many=True)
+
+class GroupAndQuestionArraySerializer(QuestionsSerializer):
+   answer = GroupAndQuestionSerializer(many=True)
 
 class ProgramWithSuplySerializer(serializers.Serializer):
    edu_program = serializers.CharField()
