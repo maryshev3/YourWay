@@ -29,7 +29,7 @@ from ProfOrientationModule.models.JsonToUserFields import JsonToUserFields
 from ProfOrientationModule.models.TupleToQuestionsList import TupleToQuestionsList
 
 class PostGroupView(APIView):
-    __access_token__ = "vk1.a.43WgCLmm1pTqmK4zlWMm-OmU9BVJX2GQVj3nlX2_v1vvER6uDTWLkX40UtHezM-JMr9hNDwc1j7vc-R_z-xt-Di90wC6n2cbFWwoXF7sFmaRo_0a66GN_Uugt3pHJu3xxEhU4RD2LUz8AK3bCYh30w-b6D4gE1MfzTnlVSt8qazCY9JtPCeiF1Ly-W9ARr_GwJO0eso1KeHhCs7F"
+    __access_token__ = os.environ['ACCESS_TOKEN_VK']
     __db_service__ = None
     __classifier__ = None
 
