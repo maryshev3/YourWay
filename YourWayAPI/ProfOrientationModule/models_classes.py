@@ -4,7 +4,8 @@ class Question:
     edu_program = ''
 
 class GroupWithTest:
-    group = ''
+    group = list()
+    probability = 0.0
     single_program = ''
     questions = list()
 
