@@ -227,7 +227,7 @@ class PostSuplyByProgramView(APIView):
         professions = self.__db_service__.get_professions(program)
         subjects = self.__db_service__.get_subjects(program)
 
-        if professions == '' or subjects == '':
+        if len(professions) == 0 or len(subjects) == 0:
             return Response({'error':'Not found professions or subjects for this program'}, status=status.HTTP_404_NOT_FOUND)
 
         result = ProgramWithSuply()
