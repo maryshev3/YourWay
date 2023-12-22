@@ -66,3 +66,8 @@ class VKService:
         schools_list.extend(groups_list)
         
         return ' '.join(schools_list)
+    
+    def authorize(self, silent_token, uuid):
+        response = self.__send_request__("auth.exchangeSilentAuthToken", {'token': silent_token, 'uuid': uuid})
+
+        return response

@@ -36,3 +36,7 @@ class SchoolsSerializer(serializers.Serializer):
 class SchoolsAndPublicsSerializer(serializers.Serializer):
    schools = SchoolsSerializer(many=True)
    publics = PublicsSerializer(many=True) 
+
+class AuthorizeSerializer(serializers.Serializer):
+   silent_token = serializers.CharField()
+   uuid = serializers.CharField()

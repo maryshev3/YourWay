@@ -18,7 +18,7 @@ from ProfOrientationModule.models.NNModule.bert_classifier import BertClassifier
 
 from ProfOrientationModule.models_classes import GroupWithTest, ProgramWithSuply, Question
 
-from ProfOrientationModule.serializers import ErrorSerializer, GroupAndQuestionArraySerializer, GroupAndQuestionSerializer, AnswersSerializer, ProgramSerializer, ProgramWithSuplySerializer, SchoolsAndPublicsSerializer
+from ProfOrientationModule.serializers import AuthorizeSerializer, ErrorSerializer, GroupAndQuestionArraySerializer, GroupAndQuestionSerializer, AnswersSerializer, ProgramSerializer, ProgramWithSuplySerializer, SchoolsAndPublicsSerializer
 from rest_framework.decorators import api_view
 
 from ProfOrientationModule.models.DataModule.data_functions import del_punctuation
@@ -29,7 +29,7 @@ from ProfOrientationModule.models.JsonToUserFields import JsonToUserFields
 from ProfOrientationModule.models.TupleToQuestionsList import TupleToQuestionsList
 
 class PostGroupView(APIView):
-    __access_token__ = "vk1.a.43WgCLmm1pTqmK4zlWMm-OmU9BVJX2GQVj3nlX2_v1vvER6uDTWLkX40UtHezM-JMr9hNDwc1j7vc-R_z-xt-Di90wC6n2cbFWwoXF7sFmaRo_0a66GN_Uugt3pHJu3xxEhU4RD2LUz8AK3bCYh30w-b6D4gE1MfzTnlVSt8qazCY9JtPCeiF1Ly-W9ARr_GwJO0eso1KeHhCs7F_rKH"
+    __access_token__ = os.environ['ACCESS_TOKEN_VK']
     __db_service__ = None
     __classifier__ = None
 
@@ -237,3 +237,31 @@ class PostSuplyByProgramView(APIView):
 
         return Response(ProgramWithSuplySerializer(result).data)
 
+class PostAuthorizeVK(APIView):
+    __db_service__ = None
+    __access_token__ = os.environ['ACCESS_TOKEN_VK_AUTH']
+
+    def __prepare__(self):
+        config = configparser.ConfigParser()
+
+        config.read('./ProfOrientationModule/config.ini')
+
+        self.__db_service__ = DBService(
+                database = config["DataBaseSettings"]["db_name"],
+                user = config["DataBaseSettings"]["db_user"],
+                password = config["DataBaseSettings"]["db_password"],
+                host = config["DataBaseSettings"]["db_host"],
+                port = config["DataBaseSettings"]["db_port"]
+            )
+
+    @swagger_auto_schema(
+        operation_description="This method defined for authorization in VK",
+        request_body=AuthorizeSerializer
+    )
+    def post(self, request):
+        silent_token = json.loads(request.body)['silent_token']
+        uuid = json.loads(request.body)['uuid']
+
+        vk_service = VKService(self.__db_service__, self.__access_token__)
+
+        return Response(vk_service.authorize(silent_token, uuid))
