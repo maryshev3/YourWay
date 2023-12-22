@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from ProfOrientationModule.views import PostGroupView, PostProgramView, PostSuplyByProgramView, PostAuthorizeVK
+from ProfOrientationModule.views import PostGroupView, PostProgramView, PostSuplyByProgramView, PostAuthorizeVK, GetHelloView
 from .yasg import urlpatterns as doc_urls
 
 
@@ -27,6 +27,7 @@ urlpatterns = [
     path(r"edu/program/", PostProgramView.as_view()),
     path(r"edu/suply-by-program/", PostSuplyByProgramView.as_view()),
     path(r"auth/vk/", PostAuthorizeVK.as_view()),
+    path(r"edu/test-method/", GetHelloView.as_view()),
 ]
 
 urlpatterns += doc_urls
