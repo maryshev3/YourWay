@@ -265,3 +265,7 @@ class PostAuthorizeVK(APIView):
         vk_service = VKService(self.__db_service__, self.__access_token__)
 
         return Response(vk_service.authorize(silent_token, uuid))
+    
+class GetHelloView(APIView):
+    def get(self):
+        return Response({'message':'hello'})
