@@ -267,5 +267,5 @@ class PostAuthorizeVK(APIView):
         return Response(vk_service.authorize(silent_token, uuid))
     
 class GetHelloView(APIView):
-    def get(self):
+    def get(self, request):
         return Response({'message':'hello'})
