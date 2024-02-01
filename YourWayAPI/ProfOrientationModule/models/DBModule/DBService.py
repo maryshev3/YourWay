@@ -12,6 +12,61 @@ class DBService:
             port = port
         )
 
+    def get_profiles(self, program_name):
+        cursor = self.__connection__.cursor()
+
+        cursor.execute(f"SELECT prof.name, prof.is_ochno, prof.is_zaochno, prof.is_ochzaoch FROM public.profiles as prof INNER JOIN public.programs as prog ON prof.program_id = prog.program_id WHERE prog.program = \'{program_name}\'")
+
+        result = cursor.fetchall()
+
+        cursor.close()
+
+        return result
+    
+    def get_subjects_ege(self, program_name, profile_name):
+        cursor = self.__connection__.cursor()
+
+        cursor.execute(f'''
+            SELECT
+                ege.name as ege_name,
+                ege_prof.is_required as ege_is_required
+            FROM public.subjects_ege as ege
+                INNER JOIN public.ege_profile as ege_prof ON ege.id = ege_prof.ege_id
+                INNER JOIN public.profiles as prof ON ege_prof.profile_id = prof.id
+                INNER JOIN public.programs as prog ON prog.program_id = prof.program_id
+            WHERE prog.program = \'{program_name}\' AND ''' + ('prof.name is null' if profile_name is None else f'prof.name = \'{profile_name}\'')
+        )
+
+        result = cursor.fetchall()
+
+        cursor.close()
+
+        return result
+    
+    def get_subjects_spo(self, program_name, profile_name):
+        cursor = self.__connection__.cursor()
+
+        cursor.execute(f'''
+            SELECT
+                spo.name as spo_name
+            FROM public.subjects_spo as spo
+                INNER JOIN public.spo_profile as spo_prof ON spo.id = spo_prof.spo_id
+                INNER JOIN public.profiles as prof ON spo_prof.profile_id = prof.id
+                INNER JOIN public.programs as prog ON prog.program_id = prof.program_id
+            WHERE prog.program = \'{program_name}\' AND ''' + ('prof.name is null' if profile_name is None else f'prof.name = \'{profile_name}\'')
+        )
+
+        result = cursor.fetchall()
+
+        cursor.close()
+
+        i = 0
+        while i < len(result):
+            result[i] = result[i][0]
+            i += 1
+
+        return result
+
     def get_professions(self, program):
         cursor = self.__connection__.cursor()
 
@@ -71,6 +126,19 @@ class DBService:
             return True
         else:
             return False
+        
+    def is_in_agu(self, public_name):
+        cursor = self.__connection__.cursor()
+
+        cursor.execute("SELECT count(*) FROM popular_public WHERE popular_public.public = \'" + public_name + "\';")
+        count = cursor.fetchone()[0]
+
+        cursor.close()
+
+        if count == 1:
+            return True
+        else:
+            return False
 
     def create_popular_publics(self, public_list):
         cursor = self.__connection__.cursor()
@@ -110,7 +178,17 @@ class DBService:
         #cursor.execute("SELECT group_id FROM groups WHERE groups.group = " + str(group) + ";")
         #group_id = cursor.fetchone()[0]
 
-        cursor.execute("SELECT questions, program FROM questions INNER JOIN programs ON questions.program_id = programs.program_id WHERE programs.group = " + str(group) + ";")
+        cursor.execute("SELECT questions, program, programs.is_in_agu FROM questions INNER JOIN programs ON questions.program_id = programs.program_id WHERE programs.group = " + str(group) + ";")
+        questions = cursor.fetchall()
+        print(questions)
+        cursor.close()
+
+        return questions
+    
+    def get_questions_in_agu(self, group):
+        cursor = self.__connection__.cursor()
+
+        cursor.execute("SELECT questions, program FROM questions INNER JOIN programs ON questions.program_id = programs.program_id WHERE programs.is_in_agu = true AND programs.group = " + str(group) + ";")
         questions = cursor.fetchall()
         print(questions)
         cursor.close()
@@ -120,7 +198,7 @@ class DBService:
     def get_programs(self, group):
         cursor = self.__connection__.cursor()
 
-        cursor.execute("SELECT program FROM programs WHERE programs.group = " + str(group) + ";")
+        cursor.execute("SELECT program, is_in_agu FROM programs WHERE programs.group = " + str(group) + ";")
         programs = cursor.fetchall()
         cursor.close()
 

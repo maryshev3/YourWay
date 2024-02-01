@@ -16,7 +16,7 @@ from ProfOrientationModule.models.DBModule.DBService import DBService
 from ProfOrientationModule.models.VKService import PageClosed, PageFaked, VKService
 from ProfOrientationModule.models.NNModule.bert_classifier import BertClassifier
 
-from ProfOrientationModule.models_classes import GroupWithTest, ProgramWithSuply, Question
+from ProfOrientationModule.models_classes import GroupWithTest, Profile, ProgramWithSuply, Question, SubjectEge
 
 from ProfOrientationModule.serializers import AuthorizeSerializer, ErrorSerializer, GroupAndQuestionArraySerializer, GroupAndQuestionSerializer, AnswersSerializer, ProgramSerializer, ProgramWithSuplySerializer, SchoolsAndPublicsSerializer
 from rest_framework.decorators import api_view
@@ -120,21 +120,6 @@ class PostGroupView(APIView):
         if len(programs_list) == 1:
             single_program = programs_list[0][0]
 
-        # is_fully = True
-        # if single_program == 'None':
-        #     #Проверим, есть ли все вопросы для группы направлений (должны быть для всех направлений подготовки)
-
-        #     for program in programs_list:
-        #         is_contain = False
-        #         for question in questions_list:
-        #             if question.edu_program == program[0]:
-        #                 is_contain = True
-        #                 break
-        #         if not is_contain:
-        #             is_fully = False
-        #             break
-
-
         #формируем ответ
         result_array = list()
 
@@ -143,7 +128,6 @@ class PostGroupView(APIView):
             result.single_program = single_program
             result.probability = probabilities_list[i]
             result.group = group_name_list[i]
-            #if is_fully:
             result.questions = questions_list[i]
 
             result_array.append(result)
@@ -186,12 +170,39 @@ class PostProgramView(APIView):
 
             defined_program = max(total_sums, key=total_sums.get)
 
+            profiles = self.__db_service__.get_profiles(defined_program)
+
+            profiles_class_array = list()
+
             professions = self.__db_service__.get_professions(defined_program)
-            subjects = self.__db_service__.get_subjects(defined_program)
+            for profile in profiles:
+                profiles_class = Profile()
+
+                profiles_class.profile = profile[0]
+                profiles_class.is_ochno = profile[1]
+                profiles_class.is_zaochno = profile[2]
+                profiles_class.is_ochzaoch = profile[3]
+
+                tuples_ege = self.__db_service__.get_subjects_ege(defined_program, profile[0])
+                print('\n\n')
+                print(tuples_ege)
+                subjects_ege = list()
+                for tuple in tuples_ege:
+                    s = SubjectEge()
+
+                    s.subject = tuple[0]
+                    s.is_required = tuple[1]
+
+                    subjects_ege.append(s)
+
+                profiles_class.subjects_ege = subjects_ege
+                profiles_class.subjects_spo = self.__db_service__.get_subjects_spo(defined_program, profile[0])
+
+                profiles_class_array.append(profiles_class)
 
             result = ProgramWithSuply()
             result.professions = professions
-            result.subjects = subjects
+            result.profiles = profiles_class_array
             result.edu_program = defined_program
 
             return Response(ProgramWithSuplySerializer(result).data)
@@ -224,15 +235,39 @@ class PostSuplyByProgramView(APIView):
 
         program = json.loads(request.body)['edu_program']
 
-        professions = self.__db_service__.get_professions(program)
-        subjects = self.__db_service__.get_subjects(program)
+        profiles = self.__db_service__.get_profiles(program)
 
-        if len(professions) == 0 or len(subjects) == 0:
-            return Response({'error':'Not found professions or subjects for this program'}, status=status.HTTP_404_NOT_FOUND)
+        profiles_class_array = list()
+
+        professions = self.__db_service__.get_professions(program)
+        for profile in profiles:
+            profiles_class = Profile()
+
+            profiles_class.profile = profile[0]
+            profiles_class.is_ochno = profile[1]
+            profiles_class.is_zaochno = profile[2]
+            profiles_class.is_ochzaoch = profile[3]
+
+            tuples_ege = self.__db_service__.get_subjects_ege(program, profile[0])
+            print('\n\n')
+            print(tuples_ege)
+            subjects_ege = list()
+            for tuple in tuples_ege:
+                s = SubjectEge()
+
+                s.subject = tuple[0]
+                s.is_required = tuple[1]
+
+                subjects_ege.append(s)
+
+            profiles_class.subjects_ege = subjects_ege
+            profiles_class.subjects_spo = self.__db_service__.get_subjects_spo(program, profile[0])
+
+            profiles_class_array.append(profiles_class)
 
         result = ProgramWithSuply()
         result.professions = professions
-        result.subjects = subjects
+        result.profiles = profiles_class_array
         result.edu_program = program
 
         return Response(ProgramWithSuplySerializer(result).data)
