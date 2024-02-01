@@ -204,6 +204,7 @@ class PostProgramView(APIView):
             result.professions = professions
             result.profiles = profiles_class_array
             result.edu_program = defined_program
+            result.is_in_agu = self.__db_service__.is_in_agu(defined_program)
 
             return Response(ProgramWithSuplySerializer(result).data)
         except:
@@ -269,6 +270,7 @@ class PostSuplyByProgramView(APIView):
         result.professions = professions
         result.profiles = profiles_class_array
         result.edu_program = program
+        result.is_in_agu = self.__db_service__.is_in_agu(program)
 
         return Response(ProgramWithSuplySerializer(result).data)
 

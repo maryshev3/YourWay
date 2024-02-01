@@ -36,6 +36,7 @@ class ProgramWithSuplySerializer(serializers.Serializer):
    edu_program = serializers.CharField()
    professions = serializers.ListField(child=serializers.CharField())
    profiles = ProfileSerializer(many=True)
+   is_in_agu = serializers.BooleanField()
 
 class ErrorSerializer(serializers.Serializer):
    error = serializers.CharField()

@@ -127,18 +127,15 @@ class DBService:
         else:
             return False
         
-    def is_in_agu(self, public_name):
+    def is_in_agu(self, program):
         cursor = self.__connection__.cursor()
 
-        cursor.execute("SELECT count(*) FROM popular_public WHERE popular_public.public = \'" + public_name + "\';")
-        count = cursor.fetchone()[0]
+        cursor.execute("SELECT is_in_agu FROM programs WHERE programs.program = \'" + program + "\';")
+        result = cursor.fetchone()[0]
 
         cursor.close()
 
-        if count == 1:
-            return True
-        else:
-            return False
+        return result
 
     def create_popular_publics(self, public_list):
         cursor = self.__connection__.cursor()

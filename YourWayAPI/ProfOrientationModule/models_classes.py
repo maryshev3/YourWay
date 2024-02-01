@@ -12,6 +12,7 @@ class GroupWithTest:
 
 class ProgramWithSuply:
     edu_program = ''
+    is_in_agu = False
     professions = list()
     profiles = list()
 
