@@ -112,11 +112,11 @@ class PostGroupView(APIView):
         group_name_list = [str(group) + '. ' + self.__db_service__.get_group_name(group) for group in real_group_list]
 
         #определим вопросы по группе направлений
-        questions_list = [TupleToQuestionsList(self.__db_service__.get_questions(group)) for group in real_group_list]
+        questions_list = [TupleToQuestionsList(self.__db_service__.get_questions_in_agu(group)) for group in real_group_list]
 
         #Проверяем, несколько ли направлений
         single_program = 'None'
-        programs_list = [self.__db_service__.get_programs(group) for group in real_group_list]
+        programs_list = [self.__db_service__.get_programs_in_agu(group) for group in real_group_list]
         if len(programs_list) == 1:
             single_program = programs_list[0][0]
 

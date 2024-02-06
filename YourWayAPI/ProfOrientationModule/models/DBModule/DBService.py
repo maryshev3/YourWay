@@ -200,6 +200,15 @@ class DBService:
         cursor.close()
 
         return programs
+    
+    def get_programs_in_agu(self, group):
+        cursor = self.__connection__.cursor()
+
+        cursor.execute("SELECT program, is_in_agu FROM programs WHERE is_in_agu = true AND programs.group = " + str(group) + ";")
+        programs = cursor.fetchall()
+        cursor.close()
+
+        return programs
 
     def __del__(self):
         if self.__connection__:
