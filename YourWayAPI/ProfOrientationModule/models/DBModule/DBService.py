@@ -185,9 +185,8 @@ class DBService:
     def get_questions_in_agu(self, group):
         cursor = self.__connection__.cursor()
 
-        cursor.execute("SELECT questions, program FROM questions INNER JOIN programs ON questions.program_id = programs.program_id WHERE programs.is_in_agu = true AND programs.group = " + str(group) + ";")
+        cursor.execute("SELECT questions, program, programs.is_in_agu FROM questions INNER JOIN programs ON questions.program_id = programs.program_id WHERE programs.is_in_agu = true AND programs.group = " + str(group) + ";")
         questions = cursor.fetchall()
-        print(questions)
         cursor.close()
 
         return questions
