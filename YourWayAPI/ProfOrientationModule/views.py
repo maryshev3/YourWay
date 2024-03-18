@@ -29,7 +29,7 @@ from ProfOrientationModule.models.JsonToUserFields import JsonToUserFields
 from ProfOrientationModule.models.TupleToQuestionsList import TupleToQuestionsList
 
 class PostGroupView(APIView):
-    __access_token__ = os.environ['ACCESS_TOKEN_VK']
+    __access_token__ = ''
     __db_service__ = None
     __classifier__ = None
 
@@ -49,7 +49,7 @@ class PostGroupView(APIView):
         self.__classifier__ = BertClassifier(
                 model_path='cointegrated/rubert-tiny',
                 tokenizer_path='cointegrated/rubert-tiny',
-                n_classes=41,
+                n_classes=32,
                 epochs=60,
                 max_len=512,
                 model_save_path='./output/model.pt'
