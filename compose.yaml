@@ -1,0 +1,14 @@
+services: 
+  web: 
+    build: YourWayAPI 
+    env_file:
+      - .env
+    environment:
+      - ACCESS_TOKEN_VK_AUTH:${ACCESS_TOKEN_VK_AUTH}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+    ports: 
+      - '8000:8000'

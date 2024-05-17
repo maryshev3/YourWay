@@ -39,11 +39,11 @@ class PostGroupView(APIView):
         config.read('./ProfOrientationModule/config.ini')
 
         self.__db_service__ = DBService(
-                database = config["DataBaseSettings"]["db_name"],
-                user = config["DataBaseSettings"]["db_user"],
-                password = config["DataBaseSettings"]["db_password"],
-                host = config["DataBaseSettings"]["db_host"],
-                port = config["DataBaseSettings"]["db_port"]
+                database = os.environ['DB_NAME'],
+                user = os.environ['DB_USER'],
+                password = os.environ['DB_PASSWORD'],
+                host = os.environ['DB_HOST'],
+                port = os.environ['DB_PORT']
             )
         
         self.__classifier__ = BertClassifier(
