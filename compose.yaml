@@ -12,3 +12,9 @@ services:
       - DB_PORT=${DB_PORT}
     ports: 
       - '8000:8000'
+    networks:
+      back_db_front: {}
+
+networks:
+  back_db_front:
+    external: true
