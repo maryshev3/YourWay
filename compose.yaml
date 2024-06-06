@@ -4,7 +4,7 @@ services:
       - web
     image: nginx:latest
     ports:
-      - '81:81'
+      - '80:80'
     volumes:
       # Заменить на свой nginx конфиг
       - ./nginx:/etc/nginx/conf.d
